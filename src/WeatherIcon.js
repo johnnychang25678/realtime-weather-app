@@ -75,7 +75,6 @@ const WeatherIcon = ({ currentWeatherCode, moment }) => {
 
   return (
     <IconContainer>
-      {console.log(currentWeatherCode, moment)}
       {console.log('render: WeatherIcon')}
       {weatherIcons[moment][currentWeatherIcon]}
     </IconContainer>

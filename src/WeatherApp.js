@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import styled from '@emotion/styled'
 import WeatherIcon from './WeatherIcon'
+import sunriseAndSunsetData from './sunrise-sunset.json'
 import { ReactComponent as AirFlowIcon } from './images/airFlow.svg'
 import { ReactComponent as RainIcon } from './images/rain.svg'
 import { ReactComponent as RedoIcon } from './images/refresh.svg'
@@ -89,6 +90,80 @@ const Redo = styled.div`
   }
 `
 
+const fetchCurrentWeather = () => {
+  return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北')
+    .then(res => res.json())
+    .then(data => {
+      const locationData = data.records.location[0]
+      const weatherElements = locationData.weatherElement.reduce((neededElements, item) => {
+        if (item.elementName === 'WDSD' || item.elementName === 'TEMP' || item.elementName === 'HUMD') {
+          neededElements[item.elementName] = item.elementValue
+        }
+        return neededElements
+      }, {})
+      return {
+        observationTime: locationData.time.obsTime,
+        locationName: locationData.locationName,
+        temperature: weatherElements.TEMP,
+        windSpeed: weatherElements.WDSD,
+        humid: weatherElements.HUMD
+      }
+
+    })
+    .catch(err => console.log(err.message))
+}
+
+const fetchWeatherForecast = () => {
+  return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北市')
+    .then(res => res.json())
+    .then((data) => {
+      const locationData = data.records.location[0];
+      const weatherElements = locationData.weatherElement.reduce(
+        (neededElements, item) => {
+          if (['Wx', 'PoP', 'CI'].includes(item.elementName)) {
+            neededElements[item.elementName] = item.time[0].parameter;
+          }
+          return neededElements;
+        },
+        {}
+      )
+      return {
+        description: weatherElements.Wx.parameterName,
+        weatherCode: weatherElements.Wx.parameterValue,
+        rainPossibility: weatherElements.PoP.parameterName,
+        comfortability: weatherElements.CI.parameterName,
+      }
+    })
+    .catch(err => console.log(err.message))
+}
+
+const getMoment = (locationName) => {
+  console.log('getMoment invoked! Location name:', locationName)
+  const location = sunriseAndSunsetData.find((data) => data.locationName === locationName)
+  if (!location) return null
+  const now = new Date();
+  const nowDate = Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(now)
+    .replace(/\//g, '-');
+
+  const locationDate = location.time && location.time.find((time) => time.dataTime === nowDate)
+  const sunriseTimestamp = new Date(
+    `${locationDate.dataTime} ${locationDate.sunrise}`
+  ).getTime();
+  const sunsetTimestamp = new Date(
+    `${locationDate.dataTime} ${locationDate.sunset}`
+  ).getTime();
+
+  const nowTimeStamp = now.getTime();
+
+  return sunriseTimestamp <= nowTimeStamp && nowTimeStamp <= sunsetTimestamp ?
+    'day' : 'night';
+};
+
 
 const WeatherApp = () => {
   console.log('invoke function component: WeatherApp')
@@ -103,18 +178,23 @@ const WeatherApp = () => {
     rainPossibility: 0,
     comfortability: '',
   })
-  // console.log(weatherElement)
   const { observationTime, locationName, description, temperature, windSpeed, humid, weatherCode, rainPossibility, comfortability } = weatherElement
+
+  const moment = useMemo(() => getMoment(locationName), [locationName])
 
   const fetchData = useCallback( // useCallback is to reserve function.
     () => {
       const fetchingData = async () => {
-        const [currentWeather, weatherForecast] = await Promise.all([fetchCurrentWeather(), fetchWeatherForecast()])
+        const [currentWeather, weatherForecast] = await Promise.all(
+          [fetchCurrentWeather(), fetchWeatherForecast()]
+        )
+
         setWeatherElement({
           ...currentWeather,
           ...weatherForecast
         })
       }
+
       fetchingData()
     }, [])
 
@@ -122,55 +202,6 @@ const WeatherApp = () => {
     console.log('execute function in useEffect: WeatherApp')
     fetchData()
   }, [fetchData])
-
-
-  const fetchCurrentWeather = () => {
-    return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北')
-      .then(res => res.json())
-      .then(data => {
-        const locationData = data.records.location[0]
-        const weatherElements = locationData.weatherElement.reduce((neededElements, item) => {
-          if (item.elementName === 'WDSD' || item.elementName === 'TEMP' || item.elementName === 'HUMD') {
-            neededElements[item.elementName] = item.elementValue
-          }
-          return neededElements
-        }, {})
-
-        return {
-          observationTime: locationData.time.obsTime,
-          locationName: locationData.locationName,
-          temperature: weatherElements.TEMP,
-          windSpeed: weatherElements.WDSD,
-          humid: weatherElements.HUMD
-        }
-
-      })
-      .catch(err => console.log(err.message))
-  }
-
-  const fetchWeatherForecast = () => {
-    return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北市')
-      .then(res => res.json())
-      .then((data) => {
-        const locationData = data.records.location[0];
-        const weatherElements = locationData.weatherElement.reduce(
-          (neededElements, item) => {
-            if (['Wx', 'PoP', 'CI'].includes(item.elementName)) {
-              neededElements[item.elementName] = item.time[0].parameter;
-            }
-            return neededElements;
-          },
-          {}
-        );
-
-        return {
-          description: weatherElements.Wx.parameterName,
-          weatherCode: weatherElements.Wx.parameterValue,
-          rainPossibility: weatherElements.PoP.parameterName,
-          comfortability: weatherElements.CI.parameterName,
-        }
-      })
-  }
 
   return (
     <Container>
@@ -185,7 +216,9 @@ const WeatherApp = () => {
           <Temperature>
             {Math.round(temperature)} <Celsius>°C</Celsius>
           </Temperature>
-          <WeatherIcon currentWeatherCode={weatherCode} moment="night" />
+          <WeatherIcon
+            currentWeatherCode={weatherCode}
+            moment={moment || "day"} />
         </CurrentWeather>
         <Airflow>
           <AirFlowIcon />
