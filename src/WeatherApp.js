@@ -3,6 +3,7 @@ import styled from '@emotion/styled'
 import { ThemeProvider } from '@emotion/react'
 import sunriseAndSunsetData from './sunrise-sunset.json'
 import WeatherCard from './WeatherCard'
+import useWeatherApi from './useWeatherApi'
 
 
 // CSS in JS
@@ -33,53 +34,6 @@ const theme = {
   },
 };
 
-const fetchCurrentWeather = () => {
-  return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北')
-    .then(res => res.json())
-    .then(data => {
-      const locationData = data.records.location[0]
-      const weatherElements = locationData.weatherElement.reduce((neededElements, item) => {
-        if (item.elementName === 'WDSD' || item.elementName === 'TEMP' || item.elementName === 'HUMD') {
-          neededElements[item.elementName] = item.elementValue
-        }
-        return neededElements
-      }, {})
-      return {
-        observationTime: locationData.time.obsTime,
-        locationName: locationData.locationName,
-        temperature: weatherElements.TEMP,
-        windSpeed: weatherElements.WDSD,
-        humid: weatherElements.HUMD
-      }
-
-    })
-    .catch(err => console.log(err.message))
-}
-
-const fetchWeatherForecast = () => {
-  return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北市')
-    .then(res => res.json())
-    .then((data) => {
-      const locationData = data.records.location[0];
-      const weatherElements = locationData.weatherElement.reduce(
-        (neededElements, item) => {
-          if (['Wx', 'PoP', 'CI'].includes(item.elementName)) {
-            neededElements[item.elementName] = item.time[0].parameter;
-          }
-          return neededElements;
-        },
-        {}
-      )
-      return {
-        description: weatherElements.Wx.parameterName,
-        weatherCode: weatherElements.Wx.parameterValue,
-        rainPossibility: weatherElements.PoP.parameterName,
-        comfortability: weatherElements.CI.parameterName,
-      }
-    })
-    .catch(err => console.log(err.message))
-}
-
 const getMoment = (locationName) => {
   console.log('getMoment invoked! Location name:', locationName)
   const location = sunriseAndSunsetData.find((data) => data.locationName === locationName)
@@ -107,60 +61,21 @@ const getMoment = (locationName) => {
     'day' : 'night';
 };
 
-
 const WeatherApp = () => {
   console.log('invoke function component: WeatherApp')
-  const [weatherElement, setWeatherElement] = useState({
-    observationTime: new Date(),
-    locationName: '',
-    description: '',
-    temperature: 0,
-    windSpeed: 0,
-    humid: 0,
-    weatherCode: 0,
-    rainPossibility: 0,
-    comfortability: '',
-    isLoading: true
-  })
+  const [weatherElement, fetchData] = useWeatherApi() // custom hook
   const { locationName } = weatherElement
 
   const [currentTheme, setCurrentTheme] = useState('light')
 
   const moment = useMemo(() => getMoment(locationName), [locationName])
 
-  const fetchData = useCallback( // useCallback is to reserve function.
-    () => {
-      const fetchingData = async () => {
-        const [currentWeather, weatherForecast] = await Promise.all(
-          [fetchCurrentWeather(), fetchWeatherForecast()]
-        )
-
-        setWeatherElement({
-          ...currentWeather,
-          ...weatherForecast,
-          isLoading: false // change loading to false once data fetched
-        })
-      }
-
-      // change isLoading to true before data fetched
-      setWeatherElement(prevState => {
-        return { ...prevState, isLoading: true }
-      })
-
-      fetchingData()
-    }, [])
-
-  useEffect(() => {
-    console.log('execute function in useEffect: WeatherApp')
-    fetchData()
-  }, [fetchData])
-
   useEffect(() => {
     setCurrentTheme(moment === 'day' ? 'light' : 'dark')
   }, [moment])
 
   return (
-    <ThemeProvider theme={theme[currentTheme]}>
+    <ThemeProvider theme={theme[currentTheme]}> {/* provides theme to all children components */}
       <Container>
         {console.log('render: WeatherApp')}
         <WeatherCard
