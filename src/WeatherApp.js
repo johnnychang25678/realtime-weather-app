@@ -4,7 +4,8 @@ import WeatherIcon from './WeatherIcon'
 import sunriseAndSunsetData from './sunrise-sunset.json'
 import { ReactComponent as AirFlowIcon } from './images/airFlow.svg'
 import { ReactComponent as RainIcon } from './images/rain.svg'
-import { ReactComponent as RedoIcon } from './images/refresh.svg'
+import { ReactComponent as RefreshIcon } from './images/refresh.svg'
+import { ReactComponent as LoadingIcon } from './images/loading.svg'
 
 // CSS in JS
 const Container = styled.div`
@@ -73,7 +74,7 @@ const Rain = styled.div`
     margin-right: 30px;
   }
 `
-const Redo = styled.div`
+const Refresh = styled.div`
   position: absolute;
   right: 15px;
   bottom: 15px;
@@ -87,6 +88,17 @@ const Redo = styled.div`
     width: 15px;
     height: 15px;
     cursor: pointer;
+    animation: rotate infinite 1.5s linear;
+    animation-duration: ${(props) => props.isLoading ? '1.5s' : '0s'}
+  }
+
+  @keyframes rotate {
+    from {
+      transform: rotate(360deg)
+    }
+    to {
+      transform: rotate(0deg)
+    }
   }
 `
 
@@ -177,8 +189,9 @@ const WeatherApp = () => {
     weatherCode: 0,
     rainPossibility: 0,
     comfortability: '',
+    isLoading: true
   })
-  const { observationTime, locationName, description, temperature, windSpeed, humid, weatherCode, rainPossibility, comfortability } = weatherElement
+  const { observationTime, locationName, description, temperature, windSpeed, humid, weatherCode, rainPossibility, comfortability, isLoading } = weatherElement
 
   const moment = useMemo(() => getMoment(locationName), [locationName])
 
@@ -191,9 +204,15 @@ const WeatherApp = () => {
 
         setWeatherElement({
           ...currentWeather,
-          ...weatherForecast
+          ...weatherForecast,
+          isLoading: false // change loading to false once data fetched
         })
       }
+
+      // change isLoading to true before data fetched
+      setWeatherElement(prevState => {
+        return { ...prevState, isLoading: true }
+      })
 
       fetchingData()
     }, [])
@@ -228,15 +247,16 @@ const WeatherApp = () => {
           <RainIcon />
           {Math.round(rainPossibility)} %
         </Rain>
-        <Redo onClick={fetchData}>
+        <Refresh onClick={fetchData}
+          isLoading={isLoading}>
           最後觀測時間：
           {
             new Intl
               .DateTimeFormat('zh-TW', { hour: 'numeric', minute: 'numeric' })
               .format(new Date(observationTime))
           }
-          <RedoIcon />
-        </Redo>
+          {isLoading ? <LoadingIcon /> : <RefreshIcon />}
+        </Refresh>
       </WeatherCard>
     </Container>
   )
