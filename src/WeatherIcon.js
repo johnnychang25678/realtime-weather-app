@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
 import { ReactComponent as DayThunderstorm } from './images/day-thunderstorm.svg';
 import { ReactComponent as DayClear } from './images/day-clear.svg';
@@ -58,22 +58,20 @@ const IconContainer = styled.div`
     max-height: 110px;
   }
 `
+const weatherCodeToType = (weatherCode) => {
+  const arr = Object.entries(weatherTypes)
+  const [type] = arr.find(([type, codes]) => codes.includes(Number(weatherCode))) || []
+  return type
+}
 
 const WeatherIcon = ({ currentWeatherCode, moment }) => {
   console.log('invoke function component: WeatherIcon')
   const [currentWeatherIcon, setCurrentWeatherIcon] = useState('isClear')
+  const theWeatherIcon = useMemo(() => weatherCodeToType(currentWeatherCode), [currentWeatherCode]) // useMemo is to reserve value
   useEffect(() => {
     console.log('execute function in useEffect: WeatherIcon')
-    const weatherCodeToType = (weatherCode) => {
-      const arr = Object.entries(weatherTypes)
-      const [type] = arr.find(([type, codes]) => codes.includes(Number(weatherCode))) || []
-      return type
-    }
-    const currentWeatherIcon = weatherCodeToType(currentWeatherCode)
-
-    setCurrentWeatherIcon(currentWeatherIcon)
-
-  }, [currentWeatherCode])
+    setCurrentWeatherIcon(theWeatherIcon)
+  }, [theWeatherIcon])
 
   return (
     <IconContainer>
