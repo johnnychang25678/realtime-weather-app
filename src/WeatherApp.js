@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import styled from '@emotion/styled'
-import { ReactComponent as CloudyIcon } from './images/day-cloudy.svg'
+import WeatherIcon from './WeatherIcon'
 import { ReactComponent as AirFlowIcon } from './images/airFlow.svg'
 import { ReactComponent as RainIcon } from './images/rain.svg'
 import { ReactComponent as RedoIcon } from './images/refresh.svg'
 
+// CSS in JS
 const Container = styled.div`
   background-color: #ededed;
   height: 100%;
@@ -30,21 +31,18 @@ const Description = styled.div`
   color: #828282;
   margin-bottom: 30px;
 `
-
 const CurrentWeather = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
 `
-
 const Temperature = styled.div`
   color: #757575;
   font-size: 96px;
   font-weight: 300;
   display: flex;
 `
-
 const Celsius = styled.div`
   font-weight: normal;
   font-size: 42px;
@@ -74,10 +72,6 @@ const Rain = styled.div`
     margin-right: 30px;
   }
 `
-
-const Cloudy = styled(CloudyIcon)`
-  flex-basis: 30%;
-`
 const Redo = styled.div`
   position: absolute;
   right: 15px;
@@ -97,7 +91,7 @@ const Redo = styled.div`
 
 
 const WeatherApp = () => {
-  console.log('invoke function component')
+  console.log('invoke function component: WeatherApp')
   const [weatherElement, setWeatherElement] = useState({
     observationTime: new Date(),
     locationName: '',
@@ -109,16 +103,29 @@ const WeatherApp = () => {
     rainPossibility: 0,
     comfortability: '',
   })
+  // console.log(weatherElement)
   const { observationTime, locationName, description, temperature, windSpeed, humid, weatherCode, rainPossibility, comfortability } = weatherElement
+
+  const fetchData = useCallback( // useCallback is to reserve function.
+    () => {
+      const fetchingData = async () => {
+        const [currentWeather, weatherForecast] = await Promise.all([fetchCurrentWeather(), fetchWeatherForecast()])
+        setWeatherElement({
+          ...currentWeather,
+          ...weatherForecast
+        })
+      }
+      fetchingData()
+    }, [])
+
   useEffect(() => {
-    console.log('execute function in useEffect')
-    fetchCurrentWeather()
-    fetchWeatherForecast()
-  }, [])
+    console.log('execute function in useEffect: WeatherApp')
+    fetchData()
+  }, [fetchData])
 
 
   const fetchCurrentWeather = () => {
-    fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北')
+    return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北')
       .then(res => res.json())
       .then(data => {
         const locationData = data.records.location[0]
@@ -129,22 +136,20 @@ const WeatherApp = () => {
           return neededElements
         }, {})
 
-        setWeatherElement(prevState => ({
-          ...prevState,
+        return {
           observationTime: locationData.time.obsTime,
           locationName: locationData.locationName,
-          description: '多雲時晴',
           temperature: weatherElements.TEMP,
           windSpeed: weatherElements.WDSD,
           humid: weatherElements.HUMD
-        }))
+        }
 
       })
       .catch(err => console.log(err.message))
   }
 
   const fetchWeatherForecast = () => {
-    fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北市')
+    return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北市')
       .then(res => res.json())
       .then((data) => {
         const locationData = data.records.location[0];
@@ -158,19 +163,18 @@ const WeatherApp = () => {
           {}
         );
 
-        setWeatherElement(prevState => ({
-          ...prevState,
+        return {
           description: weatherElements.Wx.parameterName,
           weatherCode: weatherElements.Wx.parameterValue,
           rainPossibility: weatherElements.PoP.parameterName,
           comfortability: weatherElements.CI.parameterName,
-        }));
+        }
       })
   }
 
   return (
     <Container>
-      {console.log('render')}
+      {console.log('render: WeatherApp')}
       <WeatherCard>
         <Location>{locationName}</Location>
         <Description>
@@ -181,7 +185,7 @@ const WeatherApp = () => {
           <Temperature>
             {Math.round(temperature)} <Celsius>°C</Celsius>
           </Temperature>
-          <Cloudy />
+          <WeatherIcon currentWeatherCode={weatherCode} moment="night" />
         </CurrentWeather>
         <Airflow>
           <AirFlowIcon />
@@ -191,10 +195,7 @@ const WeatherApp = () => {
           <RainIcon />
           {Math.round(rainPossibility)} %
         </Rain>
-        <Redo onClick={() => {
-          fetchCurrentWeather()
-          fetchWeatherForecast()
-        }}>
+        <Redo onClick={fetchData}>
           最後觀測時間：
           {
             new Intl
