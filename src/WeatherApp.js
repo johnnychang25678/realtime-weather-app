@@ -98,18 +98,22 @@ const Redo = styled.div`
 
 const WeatherApp = () => {
   console.log('invoke function component')
-  const [currentWeather, setCurrentWeather] = useState({
-    observationTime: '2019-10-02 22:10:00',
-    locationName: '臺北市',
-    description: '多雲時晴',
-    temperature: 27.5,
-    windSpeed: 0.3,
-    humid: 0.88,
+  const [weatherElement, setWeatherElement] = useState({
+    observationTime: new Date(),
+    locationName: '',
+    description: '',
+    temperature: 0,
+    windSpeed: 0,
+    humid: 0,
+    weatherCode: 0,
+    rainPossibility: 0,
+    comfortability: '',
   })
-  const { observationTime, locationName, description, temperature, windSpeed, humid } = currentWeather
+  const { observationTime, locationName, description, temperature, windSpeed, humid, weatherCode, rainPossibility, comfortability } = weatherElement
   useEffect(() => {
     console.log('execute function in useEffect')
     fetchCurrentWeather()
+    fetchWeatherForecast()
   }, [])
 
 
@@ -124,17 +128,44 @@ const WeatherApp = () => {
           }
           return neededElements
         }, {})
-        setCurrentWeather({
+
+        setWeatherElement(prevState => ({
+          ...prevState,
           observationTime: locationData.time.obsTime,
           locationName: locationData.locationName,
           description: '多雲時晴',
           temperature: weatherElements.TEMP,
           windSpeed: weatherElements.WDSD,
           humid: weatherElements.HUMD
-        })
+        }))
 
       })
       .catch(err => console.log(err.message))
+  }
+
+  const fetchWeatherForecast = () => {
+    fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北市')
+      .then(res => res.json())
+      .then((data) => {
+        const locationData = data.records.location[0];
+        const weatherElements = locationData.weatherElement.reduce(
+          (neededElements, item) => {
+            if (['Wx', 'PoP', 'CI'].includes(item.elementName)) {
+              neededElements[item.elementName] = item.time[0].parameter;
+            }
+            return neededElements;
+          },
+          {}
+        );
+
+        setWeatherElement(prevState => ({
+          ...prevState,
+          description: weatherElements.Wx.parameterName,
+          weatherCode: weatherElements.Wx.parameterValue,
+          rainPossibility: weatherElements.PoP.parameterName,
+          comfortability: weatherElements.CI.parameterName,
+        }));
+      })
   }
 
   return (
@@ -143,8 +174,8 @@ const WeatherApp = () => {
       <WeatherCard>
         <Location>{locationName}</Location>
         <Description>
-
           {description}
+          {comfortability}
         </Description>
         <CurrentWeather>
           <Temperature>
@@ -158,9 +189,12 @@ const WeatherApp = () => {
         </Airflow>
         <Rain>
           <RainIcon />
-          {Math.round(humid * 100)} %
+          {Math.round(rainPossibility)} %
         </Rain>
-        <Redo onClick={fetchCurrentWeather}>
+        <Redo onClick={() => {
+          fetchCurrentWeather()
+          fetchWeatherForecast()
+        }}>
           最後觀測時間：
           {
             new Intl
