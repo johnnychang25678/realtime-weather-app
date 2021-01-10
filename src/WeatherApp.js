@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
 import { ThemeProvider } from '@emotion/react'
 import sunriseAndSunsetData from './sunrise-sunset.json'
 import WeatherCard from './WeatherCard'
+import WeatherSetting from './WeatherSetting'
 import useWeatherApi from './useWeatherApi'
 
 
@@ -63,6 +64,7 @@ const getMoment = (locationName) => {
 
 const WeatherApp = () => {
   console.log('invoke function component: WeatherApp')
+  const [currentPage, setCurrentPage] = useState('WeatherCard')
   const [weatherElement, fetchData] = useWeatherApi() // custom hook
   const { locationName } = weatherElement
 
@@ -78,11 +80,14 @@ const WeatherApp = () => {
     <ThemeProvider theme={theme[currentTheme]}> {/* provides theme to all children components */}
       <Container>
         {console.log('render: WeatherApp')}
-        <WeatherCard
+        {currentPage === 'WeatherCard' && (<WeatherCard
           weatherElement={weatherElement}
           moment={moment}
           fetchData={fetchData}
-        />
+          setCurrentPage={setCurrentPage}
+        />)}
+
+        {currentPage === 'WeatherSetting' && <WeatherSetting setCurrentPage={setCurrentPage} />}
       </Container>
     </ThemeProvider>
   )
