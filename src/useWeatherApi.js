@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 
-const fetchCurrentWeather = () => {
-  return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北')
+const fetchCurrentWeather = (locationName) => {
+  return fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=${locationName}`)
     .then(res => res.json())
     .then(data => {
       const locationData = data.records.location[0]
@@ -23,8 +23,8 @@ const fetchCurrentWeather = () => {
     .catch(err => console.log(err.message))
 }
 
-const fetchWeatherForecast = () => {
-  return fetch('https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=臺北市')
+const fetchWeatherForecast = (cityName) => {
+  return fetch(`https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-0DF52233-79B4-4659-A2EA-FD8F74BAF57E&locationName=${cityName}`)
     .then(res => res.json())
     .then((data) => {
       const locationData = data.records.location[0];
@@ -47,7 +47,8 @@ const fetchWeatherForecast = () => {
     .catch(err => console.log(err.message))
 }
 
-const useWeatherApi = () => {
+const useWeatherApi = (currentLocation) => {
+  const { locationName, cityName } = currentLocation
   const [weatherElement, setWeatherElement] = useState({
     observationTime: new Date(),
     locationName: '',
@@ -65,7 +66,7 @@ const useWeatherApi = () => {
     () => {
       const fetchingData = async () => {
         const [currentWeather, weatherForecast] = await Promise.all(
-          [fetchCurrentWeather(), fetchWeatherForecast()]
+          [fetchCurrentWeather(locationName), fetchWeatherForecast(cityName)]
         )
 
         setWeatherElement({
@@ -81,8 +82,9 @@ const useWeatherApi = () => {
       })
 
       fetchingData()
-    }, [])
+    }, [locationName, cityName])
 
+  // 說明：一旦 locationName 或 cityName 改變時，fetchData 就會改變，此時 useEffect 內的函式就會再次執行，拉取最新的天氣資料
   useEffect(() => {
     console.log('execute function in useEffect: WeatherApp')
     fetchData()

@@ -5,6 +5,7 @@ import sunriseAndSunsetData from './sunrise-sunset.json'
 import WeatherCard from './WeatherCard'
 import WeatherSetting from './WeatherSetting'
 import useWeatherApi from './useWeatherApi'
+import { findLocation } from './utils'
 
 
 // CSS in JS
@@ -64,13 +65,15 @@ const getMoment = (locationName) => {
 
 const WeatherApp = () => {
   console.log('invoke function component: WeatherApp')
+  const [currentCity, setCurrentCity] = useState('臺北市')
+  const currentLocation = findLocation(currentCity) || {} // use findLocation to find cityName object from locations
+
   const [currentPage, setCurrentPage] = useState('WeatherCard')
-  const [weatherElement, fetchData] = useWeatherApi() // custom hook
-  const { locationName } = weatherElement
+  const [weatherElement, fetchData] = useWeatherApi(currentLocation) // custom hook
 
   const [currentTheme, setCurrentTheme] = useState('light')
 
-  const moment = useMemo(() => getMoment(locationName), [locationName])
+  const moment = useMemo(() => getMoment(currentLocation.sunriseCityName), [currentLocation.sunriseCityName])
 
   useEffect(() => {
     setCurrentTheme(moment === 'day' ? 'light' : 'dark')
@@ -78,16 +81,26 @@ const WeatherApp = () => {
 
   return (
     <ThemeProvider theme={theme[currentTheme]}> {/* provides theme to all children components */}
+      {console.log(moment)}
       <Container>
         {console.log('render: WeatherApp')}
-        {currentPage === 'WeatherCard' && (<WeatherCard
-          weatherElement={weatherElement}
-          moment={moment}
-          fetchData={fetchData}
-          setCurrentPage={setCurrentPage}
-        />)}
+        {currentPage === 'WeatherCard' &&
+          (<WeatherCard
+            cityName={currentLocation.cityName}
+            weatherElement={weatherElement}
+            moment={moment}
+            fetchData={fetchData}
+            setCurrentPage={setCurrentPage}
+          />)
+        }
 
-        {currentPage === 'WeatherSetting' && <WeatherSetting setCurrentPage={setCurrentPage} />}
+        {currentPage === 'WeatherSetting' &&
+          (<WeatherSetting
+            setCurrentPage={setCurrentPage}
+            cityName={currentLocation.cityName}
+            setCurrentCity={setCurrentCity}
+          />)
+        }
       </Container>
     </ThemeProvider>
   )

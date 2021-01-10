@@ -103,10 +103,9 @@ const Cog = styled(CogIcon)` // add css to component
   cursor: pointer;
 `
 
-const WeatherCard = ({ weatherElement, moment, fetchData, setCurrentPage }) => {
+const WeatherCard = ({ weatherElement, moment, fetchData, setCurrentPage, cityName }) => {
   const {
     observationTime,
-    locationName,
     temperature,
     windSpeed,
     description,
@@ -118,7 +117,7 @@ const WeatherCard = ({ weatherElement, moment, fetchData, setCurrentPage }) => {
   return (
     <WeatherCardWrapper>
       <Cog onClick={() => setCurrentPage('WeatherSetting')} />
-      <Location>{locationName}</Location>
+      <Location>{cityName}</Location>
       <Description>
         {description}
         {comfortability}
