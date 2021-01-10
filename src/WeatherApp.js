@@ -65,7 +65,8 @@ const getMoment = (locationName) => {
 
 const WeatherApp = () => {
   console.log('invoke function component: WeatherApp')
-  const [currentCity, setCurrentCity] = useState('臺北市')
+  const storageCity = localStorage.getItem('cityName')
+  const [currentCity, setCurrentCity] = useState(storageCity || '臺北市')
   const currentLocation = findLocation(currentCity) || {} // use findLocation to find cityName object from locations
 
   const [currentPage, setCurrentPage] = useState('WeatherCard')
@@ -78,6 +79,10 @@ const WeatherApp = () => {
   useEffect(() => {
     setCurrentTheme(moment === 'day' ? 'light' : 'dark')
   }, [moment])
+
+  useEffect(() => {
+    localStorage.setItem('cityName', currentCity)
+  }, [currentCity])
 
   return (
     <ThemeProvider theme={theme[currentTheme]}> {/* provides theme to all children components */}
